@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>3D PRINT STUDIO | ОНЛАЙН ТРАНСЛЯЦИЯ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0f0f;
+            color: #fff;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Верхняя плашка как на фото */
+        .top-bar {
+            background: rgba(0, 255, 170, 0.05);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .connection-status {
+            color: #00ffaa;
+            font-size: 14px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .connection-status::before {
+            content: '●';
+            color: #00ffaa;
+            margin-right: 5px;
+            animation: blink 1s infinite;
+        }
+
+        .studio-title {
+            color: #00ffaa;
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .online-status {
+            color: #00ffaa;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        .online-status::after {
+            content: '●';
+            color: #00ffaa;
+            margin-left: 5px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Видео контейнер */
+        .video-section {
+            background: rgba(0, 255, 170, 0.05);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid #00ffaa;
+            box-shadow: 0 0 30px rgba(0, 255, 170, 0.3);
+        }
+
+        #videoPlayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Кнопки */
+        .button-panel {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(45deg, #00ffaa, #00aaff);
+            color: #000;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 255, 170, 0.5);
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            flex: 1 1 auto;
+            min-width: 120px;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Информация о печати */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .info-card {
+            background: rgba(0, 255, 170, 0.05);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .info-card:hover {
+            border-color: #00ffaa;
+            box-shadow: 0 0 20px rgba(0, 255, 170, 0.3);
+        }
+
+        .info-card i {
+            font-size: 2rem;
+            color: #00ffaa;
+            margin-bottom: 10px;
+        }
+
+        .info-card .label {
+            color: #88aaff;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .info-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00ffaa;
+            text-shadow: 0 0 20px #00ffaa;
+        }
+
+        .info-card .unit {
+            color: #88aaff;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        /* Прогресс бар */
+        .progress-section {
+            background: rgba(0, 255, 170, 0.05);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            color: #00ffaa;
+            margin-bottom: 10px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 25px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid #00ffaa;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffaa, #00aaff);
+            width: 67%;
+            transition: width 0.3s;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shine 2s infinite;
+        }
+
+        @keyframes shine {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(100%); }
+        }
+
+        /* Детальная информация */
+        .details-section {
+            background: rgba(0, 255, 170, 0.05);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .details-title {
+            color: #00ffaa;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .detail-label {
+            color: #88aaff;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            color: #fff;
+            font-size: 16px;
+        }
+
+        /* Контакты */
+        .contacts-section {
+            background: rgba(0, 255, 170, 0.05);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 25px;
+        }
+
+        .contacts-title {
+            color: #00ffaa;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .contacts-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .contact-item {
+            padding: 12px 25px;
+            border: 1px solid #00ffaa;
+            border-radius: 50px;
+            color: #00ffaa;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .contact-item:active {
+            background: rgba(0, 255, 170, 0.1);
+            transform: scale(0.95);
+        }
+
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            left: 20px;
+            padding: 15px;
+            background: #00ffaa;
+            color: #000;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            transform: translateX(150%);
+            transition: transform 0.3s;
+            z-index: 1000;
+            box-shadow: 0 0 30px #00ffaa;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        /* Нижняя плашка */
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #88aaff;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="notification" id="notification"></div>
+
+    <div class="container">
+        <!-- Верхняя плашка как на фото -->
+        <div class="top-bar">
+            <div class="connection-status">ПОДКЛЮЧЕНИЕ УСТАНОВЛЕНО</div>
+            <div class="studio-title">3D PRINT STUDIO</div>
+            <div class="online-status">ONLINE</div>
+        </div>
+
+        <!-- Видео -->
+        <div class="video-section">
+            <div class="video-container">
+                <!-- ВСТАВЬ СВОЙ ID ИЗ RUTUBE -->
+                <iframe id="videoPlayer" src="https://rutube.ru/play/embed/ТУТ_ТВОЙ_ID" frameborder="0" allowfullscreen></iframe>
+            </div>
+
+            <div class="button-panel">
+                <button class="btn" onclick="takeScreenshot()">📸 СКРИНШОТ</button>
+                <button class="btn" onclick="reloadPlayer()">🔄 ОБНОВИТЬ</button>
+                <button class="btn" onclick="fullscreen()">⛶ ЭКРАН</button>
+                <button class="btn" onclick="sharePage()">📱 ПОДЕЛИТЬСЯ</button>
+            </div>
+        </div>
+
+        <!-- Основные показатели -->
+        <div class="info-grid">
+            <div class="info-card">
+                <i>🌡️</i>
+                <div class="label">СОПЛО</div>
+                <div class="value" id="nozzleTemp">215</div>
+                <div class="unit">°C</div>
+            </div>
+            <div class="info-card">
+                <i>🔥</i>
+                <div class="label">СТОЛ</div>
+                <div class="value" id="bedTemp">60</div>
+                <div class="unit">°C</div>
+            </div>
+            <div class="info-card">
+                <i>⏱️</i>
+                <div class="label">ПРОШЛО</div>
+                <div class="value" id="printTime">02:34</div>
+                <div class="unit">часов</div>
+            </div>
+            <div class="info-card">
+                <i>⏳</i>
+                <div class="label">ОСТАЛОСЬ</div>
+                <div class="value" id="timeLeft">01:15</div>
+                <div class="unit">часов</div>
+            </div>
+        </div>
+
+        <!-- Прогресс -->
+        <div class="progress-section">
+            <div class="progress-header">
+                <span>ПРОГРЕСС ПЕЧАТИ</span>
+                <span id="progress">67%</span>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar" style="width: 67%"></div>
+            </div>
+        </div>
+
+        <!-- Детали печати -->
+        <div class="details-section">
+            <div class="details-title">📋 ИНФОРМАЦИЯ О ПЕЧАТИ</div>
+            <div class="details-grid">
+                <div class="detail-item">
+                    <span class="detail-label">МОДЕЛЬ</span>
+                    <span class="detail-value" id="modelName">Деталь клиента.gcode</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">ВЫСОТА СЛОЯ</span>
+                    <span class="detail-value" id="layerHeight">0.2 мм</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">СКОРОСТЬ</span>
+                    <span class="detail-value" id="speed">60 мм/с</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">МАТЕРИАЛ</span>
+                    <span class="detail-value" id="material">PLA</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">СЛОЙ</span>
+                    <span class="detail-value" id="layer">187/280</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">ПРИНТЕР</span>
+                    <span class="detail-value" id="printer">Voxelab Aquila</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Контакты -->
+        <div class="contacts-section">
+            <div class="contacts-title">📞 СВЯЗАТЬСЯ С НАМИ</div>
+            <div class="contacts-grid">
+                <a href="tel:+79991234567" class="contact-item">📱 +7 (999) 123-45-67</a>
+                <a href="https://t.me/твой_логин" class="contact-item">💬 TELEGRAM</a>
+                <a href="mailto:3d@print.ru" class="contact-item">📧 EMAIL</a>
+            </div>
+        </div>
+
+        <!-- Нижняя плашка -->
+        <div class="footer">
+            © 2024 3D PRINT STUDIO | Прямая трансляция
+        </div>
+    </div>
+
+    <script>
+        // Переменные
+        let progress = 67;
+
+        // Уведомления
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 3000);
+        }
+
+        // Функции кнопок
+        function takeScreenshot() {
+            showNotification('📸 Скриншот сохранен');
+        }
+
+        function reloadPlayer() {
+            const video = document.getElementById('videoPlayer');
+            const src = video.src;
+            video.src = '';
+            video.src = src;
+            showNotification('🔄 Плеер перезагружен');
+        }
+
+        function fullscreen() {
+            const container = document.querySelector('.video-container');
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            }
+        }
+
+        function sharePage() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '3D PRINT STUDIO',
+                    text: 'Прямая трансляция 3D-печати',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                showNotification('📋 Ссылка скопирована');
+            }
+        }
+
+        // Обновление данных (имитация)
+        function updatePrinterData() {
+            // Прогресс
+            progress += 0.1;
+            if (progress > 100) progress = 0;
+            
+            // Температуры
+            const nozzle = 210 + Math.floor(Math.random() * 5);
+            const bed = 60 + Math.floor(Math.random() * 2);
+            
+            // Обновляем
+            document.getElementById('nozzleTemp').textContent = nozzle;
+            document.getElementById('bedTemp').textContent = bed;
+            document.getElementById('progress').textContent = Math.floor(progress) + '%';
+            document.getElementById('progressBar').style.width = progress + '%';
+            
+            // Время
+            const hours = Math.floor(progress / 100 * 4);
+            const minutes = Math.floor(progress * 0.6) % 60;
+            document.getElementById('printTime').textContent = 
+                `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`;
+            
+            // Оставшееся время
+            const leftHours = 4 - hours;
+            const leftMinutes = 59 - minutes;
+            document.getElementById('timeLeft').textContent = 
+                `${leftHours.toString().padStart(2,'0')}:${leftMinutes.toString().padStart(2,'0')}`;
+            
+            // Слои
+            const totalLayers = 280;
+            const currentLayer = Math.floor(progress / 100 * totalLayers);
+            document.getElementById('layer').textContent = `${currentLayer}/${totalLayers}`;
+        }
+
+        // Запуск
+        window.onload = function() {
+            updatePrinterData();
+            setInterval(updatePrinterData, 3000);
+            showNotification('✨ Добро пожаловать');
+        };
+    </script>
+</body>
+</html>
