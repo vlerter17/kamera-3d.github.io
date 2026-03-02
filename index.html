@@ -214,7 +214,7 @@
         .progress-bar {
             height: 100%;
             background: linear-gradient(90deg, #00ffaa, #00aaff);
-            width: 67%;
+            width: 0%;
             transition: width 0.3s;
             position: relative;
         }
@@ -344,6 +344,25 @@
             color: #88aaff;
             font-size: 12px;
         }
+
+        /* Статус подключения к OctoPrint */
+        .octo-status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #88aaff;
+        }
+        
+        .octo-status.connected {
+            color: #00ffaa;
+        }
+        
+        .octo-status.connected::before {
+            content: '●';
+            color: #00ffaa;
+            margin-right: 5px;
+            animation: blink 1s infinite;
+        }
     </style>
 </head>
 <body>
@@ -377,25 +396,25 @@
             <div class="info-card">
                 <i>🌡️</i>
                 <div class="label">СОПЛО</div>
-                <div class="value" id="nozzleTemp">215</div>
+                <div class="value" id="nozzleTemp">--</div>
                 <div class="unit">°C</div>
             </div>
             <div class="info-card">
                 <i>🔥</i>
                 <div class="label">СТОЛ</div>
-                <div class="value" id="bedTemp">60</div>
+                <div class="value" id="bedTemp">--</div>
                 <div class="unit">°C</div>
             </div>
             <div class="info-card">
                 <i>⏱️</i>
                 <div class="label">ПРОШЛО</div>
-                <div class="value" id="printTime">02:34</div>
+                <div class="value" id="printTime">--:--</div>
                 <div class="unit">часов</div>
             </div>
             <div class="info-card">
                 <i>⏳</i>
                 <div class="label">ОСТАЛОСЬ</div>
-                <div class="value" id="timeLeft">01:15</div>
+                <div class="value" id="timeLeft">--:--</div>
                 <div class="unit">часов</div>
             </div>
         </div>
@@ -404,12 +423,15 @@
         <div class="progress-section">
             <div class="progress-header">
                 <span>ПРОГРЕСС ПЕЧАТИ</span>
-                <span id="progress">67%</span>
+                <span id="progress">--%</span>
             </div>
             <div class="progress-container">
-                <div class="progress-bar" id="progressBar" style="width: 67%"></div>
+                <div class="progress-bar" id="progressBar" style="width: 0%"></div>
             </div>
         </div>
+
+        <!-- Статус OctoPrint -->
+        <div class="octo-status" id="octoStatus">⏳ Подключение к OctoPrint...</div>
 
         <!-- Детали печати -->
         <div class="details-section">
@@ -417,23 +439,23 @@
             <div class="details-grid">
                 <div class="detail-item">
                     <span class="detail-label">МОДЕЛЬ</span>
-                    <span class="detail-value" id="modelName">Деталь клиента.gcode</span>
+                    <span class="detail-value" id="modelName">--</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">ВЫСОТА СЛОЯ</span>
-                    <span class="detail-value" id="layerHeight">0.2 мм</span>
+                    <span class="detail-value" id="layerHeight">--</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">СКОРОСТЬ</span>
-                    <span class="detail-value" id="speed">60 мм/с</span>
+                    <span class="detail-value" id="speed">--</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">МАТЕРИАЛ</span>
-                    <span class="detail-value" id="material">PLA</span>
+                    <span class="detail-value" id="material">--</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">СЛОЙ</span>
-                    <span class="detail-value" id="layer">187/280</span>
+                    <span class="detail-value" id="layer">--/--</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">ПРИНТЕР</span>
@@ -454,15 +476,21 @@
 
         <!-- Нижняя плашка -->
         <div class="footer">
-            © 2024 3D PRINT STUDIO | Прямая трансляция
+            © 2025 3D PRINT STUDIO | Прямая трансляция
         </div>
     </div>
 
     <script>
-        // Переменные
-        let progress = 67;
+        // ===== НАСТРОЙКИ OCTOPRINT =====
+        const OCTO_HOST = 'http://192.168.0.252:5000';  // IP твоего ПК с OctoPrint
+        const API_KEY = 'dofKnmcHCMy7gMml6q30LqC6kKPIAjKfiN8LwOIKHhY';  // API ключ из OctoPrint
 
-        // Уведомления
+        // ===== ПЕРЕМЕННЫЕ =====
+        let printerData = null;
+        let jobData = null;
+        let connectionError = false;
+
+        // ===== УВЕДОМЛЕНИЯ =====
         function showNotification(message) {
             const notification = document.getElementById('notification');
             notification.textContent = message;
@@ -470,7 +498,95 @@
             setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
-        // Функции кнопок
+        // ===== ПОЛУЧЕНИЕ ДАННЫХ ИЗ OCTOPRINT =====
+        async function fetchPrinterData() {
+            try {
+                const response = await fetch(`${OCTO_HOST}/api/printer`, {
+                    headers: { 'X-Api-Key': API_KEY }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                printerData = data;
+                
+                // Обновляем температуру сопла
+                if (data.temperature?.tool0) {
+                    const nozzle = data.temperature.tool0;
+                    document.getElementById('nozzleTemp').textContent = Math.round(nozzle.actual);
+                }
+                
+                // Обновляем температуру стола
+                if (data.temperature?.bed) {
+                    const bed = data.temperature.bed;
+                    document.getElementById('bedTemp').textContent = Math.round(bed.actual);
+                }
+                
+                connectionError = false;
+                document.getElementById('octoStatus').textContent = '✅ Подключено к принтеру';
+                document.getElementById('octoStatus').className = 'octo-status connected';
+                
+            } catch (error) {
+                console.error('Ошибка получения данных принтера:', error);
+                connectionError = true;
+                document.getElementById('octoStatus').textContent = '❌ Нет подключения к OctoPrint';
+                document.getElementById('octoStatus').className = 'octo-status';
+            }
+        }
+
+        async function fetchJobData() {
+            try {
+                const response = await fetch(`${OCTO_HOST}/api/job`, {
+                    headers: { 'X-Api-Key': API_KEY }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                jobData = data;
+                
+                // Прогресс
+                if (data.progress?.completion) {
+                    const progress = Math.round(data.progress.completion);
+                    document.getElementById('progress').textContent = progress + '%';
+                    document.getElementById('progressBar').style.width = progress + '%';
+                }
+                
+                // Прошедшее время
+                if (data.progress?.printTime) {
+                    const seconds = data.progress.printTime;
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    document.getElementById('printTime').textContent = 
+                        `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`;
+                }
+                
+                // Оставшееся время
+                if (data.progress?.printTimeLeft) {
+                    const seconds = data.progress.printTimeLeft;
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    document.getElementById('timeLeft').textContent = 
+                        `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`;
+                } else {
+                    document.getElementById('timeLeft').textContent = '--:--';
+                }
+                
+                // Название модели
+                if (data.job?.file?.name) {
+                    document.getElementById('modelName').textContent = data.job.file.name;
+                }
+                
+            } catch (error) {
+                console.error('Ошибка получения прогресса:', error);
+            }
+        }
+
+        // ===== ФУНКЦИИ КНОПОК =====
         function takeScreenshot() {
             showNotification('📸 Скриншот сохранен');
         }
@@ -503,45 +619,20 @@
             }
         }
 
-        // Обновление данных (имитация)
-        function updatePrinterData() {
-            // Прогресс
-            progress += 0.1;
-            if (progress > 100) progress = 0;
-            
-            // Температуры
-            const nozzle = 210 + Math.floor(Math.random() * 5);
-            const bed = 60 + Math.floor(Math.random() * 2);
-            
-            // Обновляем
-            document.getElementById('nozzleTemp').textContent = nozzle;
-            document.getElementById('bedTemp').textContent = bed;
-            document.getElementById('progress').textContent = Math.floor(progress) + '%';
-            document.getElementById('progressBar').style.width = progress + '%';
-            
-            // Время
-            const hours = Math.floor(progress / 100 * 4);
-            const minutes = Math.floor(progress * 0.6) % 60;
-            document.getElementById('printTime').textContent = 
-                `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`;
-            
-            // Оставшееся время
-            const leftHours = 4 - hours;
-            const leftMinutes = 59 - minutes;
-            document.getElementById('timeLeft').textContent = 
-                `${leftHours.toString().padStart(2,'0')}:${leftMinutes.toString().padStart(2,'0')}`;
-            
-            // Слои
-            const totalLayers = 280;
-            const currentLayer = Math.floor(progress / 100 * totalLayers);
-            document.getElementById('layer').textContent = `${currentLayer}/${totalLayers}`;
-        }
-
-        // Запуск
+        // ===== ЗАПУСК =====
         window.onload = function() {
-            updatePrinterData();
-            setInterval(updatePrinterData, 3000);
-            showNotification('✨ Добро пожаловать');
+            // Первое получение данных
+            fetchPrinterData();
+            fetchJobData();
+            
+            // Обновление каждые 5 секунд
+            setInterval(() => {
+                fetchPrinterData();
+                fetchJobData();
+            }, 5000);
+            
+            // Приветствие
+            showNotification('✨ Добро пожаловать в 3D PRINT STUDIO');
         };
     </script>
 </body>
